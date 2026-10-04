@@ -14,37 +14,7 @@ const SAMPLE = `def two_sum(nums, target):
         seen[x] = i
     return []`;
 
-const BANK = [
-  [
-    "Before anything else: what does `seen` map from, and what does it map to?",
-    "Which line decides that a pair has been found? What exactly is it comparing?",
-  ],
-  [
-    "Try nums = [3, 2, 4], target = 6 by hand. What should come back, and what does your code return?",
-    "Hash maps answer 'have I seen this value?' in O(1). Which value are you looking up, and which one should you be looking up?",
-  ],
-  [
-    "Look at `seen[x]` inside the return. At that moment, is `x` the value you stored earlier, or the complement of it?",
-    "Your loop structure is fine. Focus on the key you use to read from `seen`. Does it match the key you used to write?",
-  ],
-];
-
-const REFUSAL =
-  "I won't hand over the fix, that's the one thing I keep locked. But tell me: which line do you suspect, and what do you expect it to do on the failing case?";
-
-// TODO: replace with a call to your LangGraph backend, e.g.
-// fetch("/api/mentor", { method: "POST", body: JSON.stringify({ problem, code, level, history }) })
-function askMentor({ text, level, turn }) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (/(solution|answer|fix it|write it|full code)/i.test(text)) return resolve(REFUSAL);
-      const bank = BANK[level];
-      resolve(bank[turn % bank.length]);
-    }, 700);
-  });
-}
-
-const CHIPS = ["Why does it fail on [3,2,4]?", "Is my complexity okay?", "Just give me the solution"];
+const CHIPS = ["Is my complexity okay?", "Just give me the solution"];
 
 export default function App() {
   const [problem, setProblem] = useState(
@@ -55,7 +25,6 @@ export default function App() {
   const [level, setLevel] = useState(0);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [turn, setTurn] = useState(0);
   const [msgs, setMsgs] = useState([
     {
       role: "mentor",
@@ -71,13 +40,46 @@ export default function App() {
   async function send(text) {
     const t = text.trim();
     if (!t || busy) return;
+    
     setInput("");
-    setMsgs((m) => [...m, { role: "you", text: t }]);
+    
+    // 1. Add user message to UI immediately
+    const updatedMsgs = [...msgs, { role: "you", text: t }];
+    setMsgs(updatedMsgs);
     setBusy(true);
-    const reply = await askMentor({ text: t, level, turn });
-    setTurn((n) => n + 1);
-    setMsgs((m) => [...m, { role: "mentor", text: reply, level }]);
-    setBusy(false);
+
+    try {
+      // 2. Format the message history to match your FastAPI contract
+      const backendMessages = updatedMsgs.map((m) => ({
+        role: m.role === "you" ? "user" : "assistant",
+        content: m.text
+      }));
+
+      // 3. Call the LangGraph backend
+      const response = await fetch("http://127.0.0.1:8000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem_description: problem,
+          user_code: code,
+          messages: backendMessages,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // 4. Add the AI's response to the UI
+      setMsgs((m) => [...m, { role: "mentor", text: data.reply, level }]);
+    } catch (error) {
+      console.error("Backend connection error:", error);
+      setMsgs((m) => [...m, { role: "mentor", text: "⚠️ Error: Could not reach the FastAPI backend. Make sure Uvicorn is running.", level }]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
