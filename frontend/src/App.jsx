@@ -56,7 +56,7 @@ export default function App() {
       }));
 
       // 3. Call the LangGraph backend
-      const response = await fetch("http://127.0.0.1:8000/api/chat", {
+      const response = await fetch("https://algo-whisperer-cid0.onrender.com", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
