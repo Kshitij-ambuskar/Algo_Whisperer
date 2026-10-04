@@ -16,7 +16,10 @@ app = FastAPI(title="Socratic Algorithmic Mentor")
 # Allow React app origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://algo-whisperer-cid0.onrender.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
