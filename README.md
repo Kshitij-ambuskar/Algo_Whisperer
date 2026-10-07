@@ -4,7 +4,7 @@ An AI-powered debugging assistant built for competitive programmers. Standard LL
 
 Built with an open-source AI stack for Hacktoberfest 2026.
 
-## LIVE LINK : 
+## LIVE LINK
 https://algo-whisperer-cid0.onrender.com
 
 ## Features
